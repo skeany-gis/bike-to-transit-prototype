@@ -74,7 +74,7 @@ body{margin:0;font-family:'Quicksand',sans-serif;font-weight:500;color:#F5F3FF}
 html,body{height:100%;background:transparent}
 body{display:flex;align-items:center;justify-content:center;overflow:hidden;-webkit-tap-highlight-color:transparent}
 .fit{width:402px;height:874px;transform-origin:center center;flex-shrink:0}
-.phone{border-radius:44px;box-shadow:0 20px 60px rgba(10,8,30,.35)}
+.phone{border-radius:44px}
 #map,.fb,.fbv{position:absolute;inset:0}
 .fbv{opacity:0;transition:opacity .6s ease}.fbv.on{opacity:1}
 button{font-family:inherit;cursor:pointer;color:inherit}
@@ -475,7 +475,10 @@ async function startMap(){
   map = new mapboxgl.Map({container:'map', style:'mapbox://styles/mapbox/dark-v11', center:P.home, zoom:14.6,
                           attributionControl:false, logoPosition:'top-left', pitchWithRotate:false});
   map.addControl(new mapboxgl.AttributionControl({compact:true}), 'top-left');
-  map.on('error', e => { if(!live){ console.warn('Mapbox failed, using illustrated map', e.error); $('map').style.display='none'; } });
+  // If Mapbox refuses the token (wrong URL restriction, revoked token), stay on the illustrated map.
+  let mapFailed = false;
+  map.on('error', e => { const st = e.error && e.error.status;
+    if(!live && (st===401 || st===403)){ mapFailed = true; console.warn('Mapbox refused the token, using the illustrated map', e.error); $('map').style.display='none'; } });
   map.on('load', async () => {
     tint();
     const [b1, bus, b2, ...lines] = await Promise.all([ snap('cycling',[P.home,P.stopA]), snap('driving',[P.stopA,P.brookBroad,P.stopB]),
@@ -496,6 +499,7 @@ async function startMap(){
     pinEls = PINS.map(([n,c]) => { const el=document.createElement('div'); el.className='pin'; el.textContent=n; new mapboxgl.Marker({element:el}).setLngLat(c).addTo(map); return el; });
     const el = document.createElement('div'); el.className='me';
     meMarker = new mapboxgl.Marker({element:el}).setLngLat(geo.bike1[0]).addTo(map);
+    if(mapFailed) return;
     live = true; $('fb').style.display='none'; if(screen==='ride') setStep(step); else go(screen);
   });
 }
