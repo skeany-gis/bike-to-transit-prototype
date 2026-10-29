@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bike to Transit prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+<style>
+body{margin:0;font-family:'Quicksand',sans-serif;font-weight:500;color:#F5F3FF}
+.phone{width:402px;height:874px;position:relative;overflow:hidden;background:#1A1640}
+.sb{position:absolute;left:0;right:0;top:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 34px;box-sizing:border-box;font-size:16px;font-weight:600;z-index:5;color:#F5F3FF}
+.sb .ic{display:flex;gap:4px;align-items:flex-end}.sb .ic i{display:block;width:3px;border-radius:1px;background:#F5F3FF}
+.sb .bat{width:24px;height:11px;border-radius:4px;background:#F5F3FF;margin-left:4px}
+.map{position:absolute;left:0;top:0}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#211C4E;border-radius:28px 28px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;padding:0 26px 32px}
+.grab{align-self:center;width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,0.10);margin:10px 0 18px}
+.where{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border-radius:18px;padding:14px 18px}
+.where .dots{display:flex;flex-direction:column;align-items:center;gap:3px}
+.where .dots i{display:block;width:3px;height:3px;border-radius:2px;background:#A39CCF}
+.where .a{width:10px;height:10px;border-radius:5px;border:3px solid #B3A6FF;box-sizing:border-box}
+.where .b{width:10px;height:10px;border-radius:3px;background:#F5F3FF}
+.where .places{display:flex;flex-direction:column;gap:12px;font-size:15px;flex:1}
+.where .places span:first-child{color:#C3BDE6}
+.chips{display:flex;gap:10px;margin-top:14px}
+.chip{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-radius:15px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);font-size:13px;color:#F5F3FF}
+.chip svg{width:10px;height:10px}
+.eyebrow{font-size:14px;color:#C3BDE6}
+.hero{font-size:34px;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+.subl{font-size:15px;color:#C3BDE6;margin-top:6px}
+.subl b{color:#F5F3FF;font-weight:600}
+.journey{display:flex;align-items:center;margin-top:26px}
+.stop{display:flex;flex-direction:column;align-items:center;gap:8px;width:76px}
+.circ{width:52px;height:52px;border-radius:26px;display:flex;align-items:center;justify-content:center}
+.circ svg{width:26px;height:26px}
+.circ.bk{background:rgba(179,166,255,0.16);color:#B3A6FF}
+.circ.bus{background:#F1EEFF;color:#1A1640;width:auto;padding:0 14px;gap:8px;border-radius:26px}
+.circ.bus b{font-size:16px;font-weight:700;border:2px solid #1A1640;border-radius:6px;padding:0 6px;line-height:20px}
+.stop small{font-size:12px;color:#C3BDE6;text-align:center;white-space:nowrap}
+.stop small b{color:#F5F3FF;font-weight:600}
+.link{flex:1;height:0;border-top:3px dotted #A39CCF;margin-bottom:26px}
+.trip{background:rgba(255,255,255,0.07);border-radius:22px;padding:18px 16px;margin-top:24px;display:grid;grid-template-columns:56px 1fr auto 1fr 56px;align-items:center;row-gap:10px;margin-top:20px}
+.trip .ic{display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;font-weight:700;color:#C3BDE6}
+.cta{flex-shrink:0}
+.trip .ic .c{width:36px;height:36px;border-radius:18px;display:flex;align-items:center;justify-content:center}
+.trip .ic .c svg{width:19px;height:19px}
+.trip .ic .c.bk{background:rgba(179,166,255,0.16);color:#B3A6FF}
+.trip .ic .c.bus{background:#F1EEFF;color:#1A1640;width:auto;padding:0 12px;gap:6px;font-weight:700;font-size:15px}
+.trip .ts{font-size:18px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.trip .ts.l{text-align:left}.trip .ts.r{text-align:right}
+.trip .cap{font-size:12px;color:#C3BDE6;text-align:center;margin-top:-6px}
+.trip .cap.l{text-align:left}.trip .cap.r{text-align:right}
+.trip .gap{color:#A39CCF;text-align:center}
+.note{display:flex;gap:10px;align-items:center;margin-top:22px;line-height:1.4;font-size:13px;color:#C3BDE6}
+.note i{width:8px;height:8px;border-radius:4px;background:#5BD69A;flex-shrink:0}
+.cta{height:56px;border:0;border-radius:28px;background:#B3A6FF;color:#1A1640;font-family:inherit;font-size:17px;font-weight:700;width:100%}
+.more{align-self:center;margin-top:12px;font-size:14px;font-weight:500;color:#C3BDE6;height:40px;display:flex;align-items:center}
+.float{position:absolute;border-radius:22px;background:rgba(33,28,78,0.88);box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.row{background:rgba(255,255,255,0.07);border-radius:22px;padding:18px 18px;display:grid;grid-template-columns:62px minmax(0,1fr) 62px;align-items:center;gap:8px}
+.row .tm{display:flex;flex-direction:column;font-variant-numeric:tabular-nums}
+.row .tm b{font-size:18px;font-weight:600}
+.row .tm small{font-size:12px;color:#C3BDE6}
+.row .tm.r{align-items:flex-end}
+.mini{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#C3BDE6}
+.mini .c{width:30px;height:30px;border-radius:15px;display:flex;align-items:center;justify-content:center}
+.mini .c svg{width:16px;height:16px}
+.mini .c.bk{background:rgba(179,166,255,0.16);color:#B3A6FF}
+.mini .c.bus{background:#F1EEFF;color:#1A1640;width:auto;padding:0 9px;gap:5px;font-weight:700}
+.mini em{font-style:normal;color:#A39CCF}
+.amber{color:#FFD27A}
+.pillnote{display:inline-flex;margin-top:8px;font-size:12px;color:#FFD27A;background:rgba(255,210,122,0.12);border-radius:12px;padding:3px 10px}
+
+html,body{height:100%;background:transparent}
+body{display:flex;align-items:center;justify-content:center;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.fit{width:402px;height:874px;transform-origin:center center;flex-shrink:0}
+.phone{border-radius:44px;box-shadow:0 20px 60px rgba(10,8,30,.35)}
+#map,.fb,.fbv{position:absolute;inset:0}
+.fbv{opacity:0;transition:opacity .6s ease}.fbv.on{opacity:1}
+button{font-family:inherit;cursor:pointer;color:inherit}
+button:focus-visible{outline:2px solid #B3A6FF;outline-offset:2px}
+.sheet{transition:top .55s cubic-bezier(.2,.8,.2,1),transform .5s cubic-bezier(.2,.8,.2,1);z-index:3}
+.sheet.away{transform:translateY(105%)}
+.linkbtn{all:unset;cursor:pointer}
+.more.u{text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.gone{display:none!important}
+.sb{pointer-events:none}
+/* Home: floating Where to? field over a sheet of nearby stops */
+#whereField{position:absolute;left:16px;right:16px;top:574px;height:56px;z-index:4;display:flex;align-items:center;gap:12px;padding:0 18px;border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px;background:rgba(33,28,78,0.88);box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:20px;font-weight:600;color:#F5F3FF;text-align:left;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .3s}
+#whereField svg{width:20px;height:20px;color:#B3A6FF}
+#whereField.away{transform:translateY(320px);opacity:0;pointer-events:none}
+.sheetTitle{font-size:16px;font-weight:700;margin-bottom:6px}
+.near{display:flex;gap:12px;padding:12px 0;border-top:1px solid rgba(255,255,255,0.10)}
+.near:first-of-type{border-top:0}
+.rb{min-width:34px;height:26px;padding:0 8px;box-sizing:border-box;border-radius:8px;background:#F1EEFF;color:#1A1640;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.nt{display:flex;justify-content:space-between;font-size:15px;font-weight:600}
+.nt small{font-size:13px;color:#C3BDE6;font-weight:500}
+.ns{font-size:13px;color:#C3BDE6;margin-top:2px}
+.nx{font-size:13px;color:#F5F3FF;margin-top:4px;font-variant-numeric:tabular-nums}
+/* Plan: header, multi-field, suggestions */
+.planHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.planHead span{font-size:20px;font-weight:700}
+.x{width:32px;height:32px;border-radius:16px;border:0;background:rgba(255,255,255,0.07);font-size:14px;display:flex;align-items:center;justify-content:center}
+.where .places{gap:10px}
+.where .places .f{all:unset;cursor:pointer;font-size:15px;line-height:1.3;min-height:20px}
+.where .places .f.ph{color:#A39CCF}
+.where .places .f.first{color:#C3BDE6;cursor:default}
+.where.focus{box-shadow:inset 0 0 0 1.5px #B3A6FF}
+.caret{display:inline-block;width:2px;height:16px;background:#B3A6FF;vertical-align:-3px;margin:0 1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#sugg{margin-top:14px;display:flex;flex-direction:column}
+.sg{all:unset;cursor:pointer;display:flex;gap:12px;align-items:center;padding:12px 4px;border-top:1px solid rgba(255,255,255,0.10);border-radius:6px;
+  opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s}
+.sg:first-child{border-top:0}
+.sg:focus-visible{outline:2px solid #B3A6FF}
+#sugg.show .sg{opacity:1;transform:none}
+#sugg.show .sg:nth-child(2){transition-delay:.05s}#sugg.show .sg:nth-child(3){transition-delay:.1s}
+.sgi{width:36px;height:36px;border-radius:18px;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;color:#C3BDE6;flex-shrink:0}
+.sgi svg{width:18px;height:18px}
+.sgt{display:flex;flex-direction:column;min-width:0}
+.sgt b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sgt small{font-size:13px;color:#C3BDE6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Restart chip */
+#restart{position:absolute;top:56px;right:16px;z-index:6;height:34px;padding:0 14px 0 11px;border-radius:17px;border:1px solid rgba(255,255,255,0.14);background:rgba(33,28,78,0.88);
+  box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+#restart svg{width:15px;height:15px}
+/* On your way: swipeable steps, End trip outside the card */
+#ride{position:absolute;left:0;right:0;bottom:86px;z-index:3;transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .3s;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:grab}
+#ride.away,#endBtn.away,#dots.away{transform:translateY(140%);opacity:0;pointer-events:none}
+#track{display:flex;gap:12px;padding-left:24px;transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+#track.drag{transition:none}
+.step{position:relative;flex:0 0 340px;box-sizing:border-box;padding:22px 22px 20px;transition:opacity .3s}
+.step:not(.cur){opacity:.55}
+.stt{font-size:24px;font-weight:600;letter-spacing:-0.01em;line-height:1.15}
+.circ.bus{gap:6px}
+.circ.bus b{border:0;padding:0;font-size:16px}
+#dots{position:absolute;left:24px;bottom:46px;z-index:3;display:flex;gap:8px;align-items:center;transition:transform .5s,opacity .3s}
+#dots button{all:unset;cursor:pointer;width:8px;height:8px;border-radius:4px;background:#A39CCF;opacity:.5;transition:width .25s,background .25s,opacity .25s}
+#dots button.on{width:22px;background:#B3A6FF;opacity:1}
+#endBtn{position:absolute;right:16px;bottom:28px;z-index:3;height:44px;padding:0 20px;border-radius:22px;border:1px solid rgba(255,255,255,0.14);background:rgba(33,28,78,0.88);
+  box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:15px;font-weight:700;transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.me{width:18px;height:18px;border-radius:9px;background:#B3A6FF;border:3px solid #1E1A48;box-sizing:border-box;box-shadow:0 0 0 12px rgba(179,166,255,.22)}
+.pin{min-width:26px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:7px;background:#F1EEFF;color:#1A1640;border:2px solid #1E1A48;font:700 13px 'Quicksand',sans-serif;display:flex;align-items:center;justify-content:center;transition:opacity .4s}
+.mapboxgl-ctrl-top-left{top:48px!important}
+.mapboxgl-ctrl-attrib{font-family:'Quicksand',sans-serif}
+button.chip{font-family:inherit;cursor:pointer}
+.scrim{position:absolute;inset:0;z-index:7;background:rgba(8,6,24,.5);opacity:0;pointer-events:none;transition:opacity .3s}
+.scrim.on{opacity:1;pointer-events:auto}
+.ios{position:absolute;left:0;right:0;bottom:0;z-index:8;background:#211C4E;border-radius:28px 28px 0 0;padding:8px 20px 34px;box-shadow:0 -8px 30px rgba(0,0,0,.35);
+  transition:transform .4s cubic-bezier(.2,.8,.2,1)}
+.ios.away{transform:translateY(105%)}
+.ios::before{content:'';display:block;width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,0.10);margin:4px auto 10px}
+.iosHead{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:14px}
+.iosHead b{font-size:17px;font-weight:700}
+.iosBtn{all:unset;cursor:pointer;font-size:16px;color:#B3A6FF;justify-self:start}
+.iosBtn.strong{font-weight:700;justify-self:end}
+.seg{display:flex;background:rgba(255,255,255,0.07);border-radius:12px;padding:3px;margin-bottom:10px}
+.seg span{flex:1;text-align:center;font-size:14px;font-weight:600;padding:7px 0;border-radius:9px;color:#C3BDE6}
+.seg span.on{background:#B3A6FF;color:#1A1640}
+.wheel{position:relative;display:flex;gap:4px;height:180px;align-items:center;cursor:pointer;
+  -webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.wheel .band{position:absolute;left:0;right:0;top:72px;height:36px;border-radius:10px;background:rgba(255,255,255,0.07)}
+.wheel .col{position:relative;flex:1;display:flex;flex-direction:column;text-align:center}
+.wheel .col.w2{flex:2.2}
+.wheel i{font-style:normal;height:36px;line-height:36px;font-size:18px;color:#A39CCF}
+.wheel i.sel{color:#F5F3FF;font-size:21px;font-weight:600}
+.iosRow{all:unset;cursor:pointer;display:block;text-align:center;margin-top:12px;font-size:15px;font-weight:600;color:#B3A6FF;width:100%}
+.iosNote{font-size:14px;color:#C3BDE6;margin:0 0 14px;line-height:1.4}
+.opts{display:flex;flex-direction:column;background:rgba(255,255,255,0.07);border-radius:16px;overflow:hidden}
+.opt{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:16px 18px;font-size:16px;border-top:1px solid rgba(255,255,255,0.10)}
+.opt:first-child{border-top:0}
+.opt i{width:20px;height:20px;border-radius:10px;border:2px solid #A39CCF;box-sizing:border-box}
+.opt.on i{border:6px solid #B3A6FF}
+.opt:focus-visible{outline:2px solid #B3A6FF;outline-offset:-2px}
+#chips .chip{font-size:12px}
+.where .lbls{display:flex;flex-direction:column;gap:10px;font-size:12px;font-weight:600;color:#C3BDE6;width:44px;flex-shrink:0}
+.where .lbls span{line-height:1.3;min-height:20px;display:flex;align-items:center;font-size:12px}
+.where .places .f{display:flex;align-items:center}
+#sunrise{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity 2.5s ease;mix-blend-mode:screen;
+  background:linear-gradient(to top,rgba(255,128,40,.78) 0%,rgba(255,150,70,.55) 16%,rgba(255,94,150,.36) 40%,rgba(150,90,230,.16) 66%,rgba(150,90,230,0) 90%)}
+#sunrise.on{opacity:1}
+#sunToast{all:unset;cursor:pointer;position:absolute;left:16px;right:16px;top:102px;z-index:6;display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:20px;
+  background:rgba(33,28,78,0.88);border:1px solid rgba(255,255,255,0.14);box-shadow:0 6px 24px rgba(0,0,0,.25);transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .4s}
+#sunToast.away{transform:translateY(-30px);opacity:0;pointer-events:none}
+#sunToast b{display:block;font-size:16px;font-weight:700}
+#sunToast small{display:block;font-size:13px;color:#C3BDE6;margin-top:2px}
+.sun{width:38px;height:38px;border-radius:19px;flex-shrink:0;background:radial-gradient(circle at 50% 60%,#FFD27A 0 38%,#FF8A4C 39% 55%,rgba(255,94,150,.5) 56%)}
+#alert{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,.55)}
+.alertCard{width:286px;border-radius:22px;background:#211C4E;box-shadow:0 20px 50px rgba(0,0,0,.45);text-align:center;overflow:hidden;animation:pop .25s ease}
+@keyframes pop{from{transform:scale(1.08);opacity:0}to{transform:none;opacity:1}}
+.alertCard b{display:block;font-size:17px;font-weight:700;padding:22px 20px 0}
+.alertCard p{font-size:14px;color:#C3BDE6;margin:6px 20px 18px;line-height:1.4}
+.alertBtns{display:flex;border-top:1px solid rgba(255,255,255,0.10)}
+.alertBtns button{all:unset;cursor:pointer;flex:1;padding:14px 0;font-size:16px;color:#B3A6FF;text-align:center}
+.alertBtns button+button{border-left:1px solid rgba(255,255,255,0.10)}
+.alertBtns .strong{font-weight:700}
+.alertBtns button:focus-visible{outline:2px solid #B3A6FF;outline-offset:-2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="fit" id="fit"><div class="phone">
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+    <symbol id="w-bike" viewBox="2 2 16 16"><path d="M14.7021 10.0527C14.4691 10.0527 14.2437 10.0812 14.0257 10.1314L13.5354 8.7429C13.5382 8.68793 13.5307 8.6316 13.5062 8.58003C13.4913 8.54745 13.4703 8.51827 13.4465 8.49248L13.2007 7.79621H13.2903C13.839 7.79621 14.2858 7.34967 14.2858 6.80133C14.2858 6.25299 13.839 5.80645 13.2903 5.80645H11.1479C10.9558 5.80645 10.8003 5.96186 10.8003 6.15391C10.8003 6.34596 10.9558 6.50137 11.1479 6.50137H13.2903C13.456 6.50137 13.5904 6.63574 13.5904 6.80133C13.5904 6.96624 13.456 7.10129 13.2903 7.10129H12.709C12.5963 7.10129 12.4904 7.15626 12.4252 7.24788C12.36 7.34017 12.3437 7.45825 12.381 7.56412L12.669 8.37847H8.38612L8.23401 7.8953H8.63194C8.82412 7.8953 8.97962 7.73989 8.97962 7.54784C8.97962 7.35578 8.82412 7.20038 8.63194 7.20038H6.86367C6.6715 7.20038 6.516 7.35579 6.516 7.54784C6.516 7.7399 6.6715 7.8953 6.86367 7.8953H7.50538L7.7865 8.78905L6.60904 10.4347C6.17241 10.1918 5.67059 10.0527 5.13684 10.0527C3.46095 10.0527 2.09677 11.4154 2.09677 13.0909C2.09677 14.7657 3.46032 16.129 5.13684 16.129C6.69526 16.129 7.98204 14.9502 8.15518 13.4383H9.5031H9.50445C9.50581 13.4383 9.50649 13.4376 9.50785 13.4376C9.53841 13.4376 9.56829 13.4322 9.59749 13.4241C9.60156 13.4227 9.60495 13.4234 9.60903 13.422C9.61718 13.4193 9.62465 13.4152 9.63212 13.4118C9.64162 13.4078 9.65113 13.4044 9.66064 13.3996C9.67422 13.3928 9.68644 13.3854 9.69866 13.3766C9.70613 13.3711 9.7136 13.3671 9.72107 13.3609C9.73397 13.3501 9.7462 13.3386 9.75706 13.3263C9.76114 13.3223 9.76589 13.3189 9.76996 13.3141L13.0437 9.43839L13.3703 10.3634C12.3605 10.8581 11.6618 11.893 11.6618 13.09C11.6618 14.7649 13.0253 16.1282 14.7019 16.1282C16.3778 16.1282 17.7419 14.7655 17.7419 13.09C17.7419 11.4152 16.3784 10.0519 14.7019 10.0519L14.7021 10.0527ZM8.04738 9.61834L9.02996 12.7427H8.15466C8.06842 11.9908 7.70581 11.3237 7.17208 10.8412L8.04669 9.61832L8.04738 9.61834ZM7.45253 12.7434H5.81262L6.76669 11.4099C7.12794 11.7594 7.37512 12.2235 7.45321 12.7434H7.45253ZM5.13702 15.4341C3.8441 15.4341 2.7923 14.3829 2.7923 13.0908C2.7923 11.7988 3.84415 10.7476 5.13702 10.7476C5.52 10.7476 5.88125 10.8419 6.20109 11.0055L4.85385 12.8887C4.7778 12.9946 4.76829 13.1337 4.82737 13.2497C4.88713 13.3651 5.00663 13.4384 5.13633 13.4384H7.45185C7.28276 14.5656 6.31036 15.4342 5.13633 15.4342L5.13702 15.4341ZM9.64653 12.3836L8.60486 9.07317H12.4421L9.6458 12.3836H9.64653ZM14.7021 15.4341C13.4092 15.4341 12.3574 14.3829 12.3574 13.0908C12.3574 12.1957 12.8626 11.4167 13.6027 11.0224L14.3741 13.2062C14.4244 13.3487 14.5588 13.4383 14.7021 13.4383C14.7401 13.4383 14.7795 13.4315 14.8176 13.4179C14.9982 13.3541 15.0932 13.156 15.0294 12.9748L14.258 10.791C14.402 10.7632 14.55 10.7476 14.7015 10.7476C15.9944 10.7476 17.0462 11.7988 17.0462 13.0908C17.0462 14.3829 15.9943 15.4341 14.7015 15.4341L14.7021 15.4341Z"></path></symbol>
+    <symbol id="w-clock" viewBox="2 2 16 16"><path d="M9.67742 7.90323C9.67742 7.72507 9.82184 7.58065 10 7.58065C10.1782 7.58065 10.3226 7.72507 10.3226 7.90323V11.318L12.4055 13.401C12.5315 13.5269 12.5315 13.7311 12.4055 13.8571C12.2795 13.9831 12.0753 13.9831 11.9493 13.8571L9.67742 11.5852V7.90323Z"></path><path d="M15.1613 11.2903C15.1613 8.35074 12.7783 5.96774 9.83871 5.96774C6.89913 5.96774 4.51613 8.35074 4.51613 11.2903C4.51613 14.2299 6.89913 16.6129 9.83871 16.6129V17.2581C6.54282 17.2581 3.87097 14.5862 3.87097 11.2903C3.87097 7.99443 6.54282 5.32258 9.83871 5.32258C13.1346 5.32258 15.8065 7.99443 15.8065 11.2903C15.8065 14.5862 13.1346 17.2581 9.83871 17.2581V16.6129C12.7783 16.6129 15.1613 14.2299 15.1613 11.2903Z"></path></symbol>
+    <symbol id="w-bus" viewBox="2 2 16 16"><path d="M15.6941 7.54004H14.8702V7.41417C14.8702 6.25922 13.9336 5.32258 12.7786 5.32258L7.06004 5.32315C5.90508 5.32315 4.96844 6.2598 4.96844 7.41473V7.5406H4.1446C3.7273 7.5406 3.3871 7.88022 3.3871 8.2981V10.2009C3.3871 10.38 3.53225 10.5252 3.71142 10.5252H4.29712C4.4763 10.5252 4.62144 10.38 4.62144 10.2009V9.03286C4.62144 8.85369 4.4763 8.70854 4.29712 8.70854H4.03574V8.29805C4.03574 8.23851 4.0845 8.18975 4.14403 8.18975H4.96787V14.9204C4.96787 15.4579 5.40332 15.8934 5.94082 15.8934H6.15798V16.5431C6.15798 16.7597 6.33374 16.9355 6.55033 16.9355H7.28004C7.49663 16.9355 7.67239 16.7597 7.67239 16.5431V15.8934H12.1652V16.5431C12.1652 16.7597 12.3409 16.9355 12.5575 16.9355H13.2872C13.5038 16.9355 13.6796 16.7597 13.6796 16.5431V15.8934H13.8968C14.4343 15.8934 14.8697 15.4579 14.8697 14.9204L14.8703 8.18917H15.6941C15.7536 8.18917 15.8024 8.23793 15.8024 8.29747V8.70796H15.5416C15.3624 8.70796 15.2173 8.85311 15.2173 9.03228V10.2003C15.2173 10.3794 15.3624 10.5246 15.5416 10.5246H16.1273C16.3065 10.5246 16.4516 10.3794 16.4516 10.2003V8.29752C16.4516 7.88022 16.112 7.54002 15.6947 7.54002L15.6941 7.54004ZM7.97227 6.61302C7.97227 6.37432 8.16617 6.18041 8.40489 6.18041H11.4337C11.6724 6.18041 11.8663 6.37431 11.8663 6.61302V6.66858C11.8663 6.90728 11.6724 7.1012 11.4337 7.1012H8.40489C8.16619 7.1012 7.97227 6.90729 7.97227 6.66858V6.61302ZM7.15184 14.5673C6.75551 14.5673 6.4346 14.2464 6.4346 13.8501C6.4346 13.4537 6.75551 13.1328 7.15184 13.1328C7.54817 13.1328 7.86908 13.4537 7.86908 13.8501C7.86908 14.2464 7.54817 14.5673 7.15184 14.5673ZM12.6868 14.5673C12.2905 14.5673 11.9696 14.2464 11.9696 13.8501C11.9696 13.4537 12.2905 13.1328 12.6868 13.1328C13.0831 13.1328 13.4041 13.4537 13.4041 13.8501C13.4041 14.2464 13.0831 14.5673 12.6868 14.5673ZM13.8072 11.4704C13.8072 11.6995 13.6218 11.8849 13.3927 11.8849H6.44603C6.21697 11.8849 6.03155 11.6995 6.03155 11.4704V8.27947C6.03155 8.05041 6.21695 7.865 6.44603 7.865H13.3927C13.6218 7.865 13.8072 8.05039 13.8072 8.27947V11.4704Z"></path></symbol>
+  </defs></svg>
+<div id="fb" class="fb"><div class="fbv" data-v="home"><svg class="map" width="402" height="874" viewBox="-9.132947976878597 -24.42196531791906 418.2658959537572 909.364161849711" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="0.75" fill="none" stroke="#8C7FE0" stroke-width="4" stroke-linecap="round"><path d="M118 -700 L118 1700"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450"/><path d="M328 -700 L408 1700"/><path d="M-700 204 L1100 118"/></g><g><rect x="105.0" y="241" width="26" height="22" rx="7" fill="#F1EEFF" stroke="#1E1A48" stroke-width="2"/><text x="118" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1640" font-family="Quicksand, sans-serif">1</text></g><g><rect x="344.0" y="289" width="34" height="22" rx="7" fill="#F1EEFF" stroke="#1E1A48" stroke-width="2"/><text x="361" y="305" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1640" font-family="Quicksand, sans-serif">14</text></g><g><rect x="183.0" y="150" width="34" height="22" rx="7" fill="#F1EEFF" stroke="#1E1A48" stroke-width="2"/><text x="200" y="166" text-anchor="middle" font-size="13" font-weight="700" fill="#1A1640" font-family="Quicksand, sans-serif">20</text></g><circle cx="70" cy="168" r="20" fill="#B3A6FF" opacity="0.22"/><circle cx="70" cy="168" r="8" fill="#B3A6FF" stroke="#1E1A48" stroke-width="3"/></svg></div><div class="fbv" data-v="plan"><svg class="map" width="402" height="874" viewBox="-9.132947976878597 -24.42196531791906 418.2658959537572 909.364161849711" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><circle cx="70" cy="168" r="20" fill="#B3A6FF" opacity="0.22"/><circle cx="70" cy="168" r="8" fill="#B3A6FF" stroke="#1E1A48" stroke-width="3"/></svg></div><div class="fbv" data-v="trip"><svg class="map" width="402" height="874" viewBox="-252.51428571428573 21.428571428571416 915.0285714285715 1989.3904761904762" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="1"><polyline points="70,168 70,252 118,252" fill="none" stroke="#1E1A48" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#1E1A48" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#1E1A48" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/><polyline points="70,168 70,252 118,252" fill="none" stroke="#B3A6FF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 12"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#F1EEFF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#B3A6FF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 12"/><circle cx="70" cy="168" r="9" fill="#1E1A48" stroke="#B3A6FF" stroke-width="4"/><circle cx="118" cy="252" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="296" cy="560" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="338" cy="626" r="10" fill="#F1EEFF"/><circle cx="338" cy="626" r="4" fill="#1E1A48"/></g></svg></div><div class="fbv" data-v="other"><svg class="map" width="402" height="874" viewBox="-360.164705882353 0.5411764705882263 1130.329411764706 2457.4823529411765" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="0.4"><polyline points="70,168 70,252 118,252" fill="none" stroke="#1E1A48" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#1E1A48" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#1E1A48" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/><polyline points="70,168 70,252 118,252" fill="none" stroke="#B3A6FF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 12"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#F1EEFF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#B3A6FF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 12"/><circle cx="70" cy="168" r="9" fill="#1E1A48" stroke="#B3A6FF" stroke-width="4"/><circle cx="118" cy="252" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="296" cy="560" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="338" cy="626" r="10" fill="#F1EEFF"/><circle cx="338" cy="626" r="4" fill="#1E1A48"/></g></svg></div><div class="fbv" data-v="ride0"><svg class="map" width="402" height="874" viewBox="1.764705882352942 45.29411764705881 236.47058823529412 514.1176470588235" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="1"><polyline points="70,168 70,252 118,252" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="70,168 70,252 118,252" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#F1EEFF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><circle cx="70" cy="168" r="9" fill="#1E1A48" stroke="#B3A6FF" stroke-width="4"/><circle cx="118" cy="252" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="296" cy="560" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="338" cy="626" r="10" fill="#F1EEFF"/><circle cx="338" cy="626" r="4" fill="#1E1A48"/></g><circle cx="70" cy="214" r="20" fill="#B3A6FF" opacity="0.22"/><circle cx="70" cy="214" r="8" fill="#B3A6FF" stroke="#1E1A48" stroke-width="3"/></svg></div><div class="fbv" data-v="ride1"><svg class="map" width="402" height="874" viewBox="-0.235294117647058 77.29411764705881 236.47058823529412 514.1176470588235" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="1"><polyline points="70,168 70,252 118,252" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="70,168 70,252 118,252" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#F1EEFF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><circle cx="70" cy="168" r="9" fill="#1E1A48" stroke="#B3A6FF" stroke-width="4"/><circle cx="118" cy="252" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="296" cy="560" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="338" cy="626" r="10" fill="#F1EEFF"/><circle cx="338" cy="626" r="4" fill="#1E1A48"/></g><circle cx="118" cy="252" r="20" fill="#B3A6FF" opacity="0.22"/><circle cx="118" cy="252" r="8" fill="#B3A6FF" stroke="#1E1A48" stroke-width="3"/></svg></div><div class="fbv" data-v="ride2"><svg class="map" width="402" height="874" viewBox="64.35483870967744 195.2258064516129 285.2903225806451 620.258064516129" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="1"><polyline points="70,168 70,252 118,252" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="70,168 70,252 118,252" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#F1EEFF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><circle cx="70" cy="168" r="9" fill="#1E1A48" stroke="#B3A6FF" stroke-width="4"/><circle cx="118" cy="252" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="296" cy="560" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="338" cy="626" r="10" fill="#F1EEFF"/><circle cx="338" cy="626" r="4" fill="#1E1A48"/></g><circle cx="210" cy="448" r="20" fill="#B3A6FF" opacity="0.22"/><circle cx="210" cy="448" r="8" fill="#B3A6FF" stroke="#1E1A48" stroke-width="3"/></svg></div><div class="fbv" data-v="ride3"><svg class="map" width="402" height="874" viewBox="198.76470588235293 418.2941176470588 236.47058823529412 514.1176470588235" preserveAspectRatio="none" aria-hidden="true"><rect x="-800" y="-800" width="2000" height="2600" fill="#1E1A48"/><rect x="170" y="150" width="120" height="96" rx="16" fill="#233552"/><rect x="20" y="520" width="110" height="80" rx="16" fill="#233552"/><path d="M-60 760 C80 720 200 800 300 760 C380 728 440 770 1100 760 L1100 1700 L-700 1700 L-700 760 Z" fill="#1F2C5C"/><path d="M-680 -700 L-600 1700" stroke="#262159" stroke-width="7"/><path d="M-596 -700 L-516 1700" stroke="#262159" stroke-width="7"/><path d="M-512 -700 L-432 1700" stroke="#262159" stroke-width="7"/><path d="M-428 -700 L-348 1700" stroke="#262159" stroke-width="7"/><path d="M-344 -700 L-264 1700" stroke="#262159" stroke-width="7"/><path d="M-260 -700 L-180 1700" stroke="#262159" stroke-width="7"/><path d="M-176 -700 L-96 1700" stroke="#262159" stroke-width="7"/><path d="M-92 -700 L-12 1700" stroke="#262159" stroke-width="7"/><path d="M-8 -700 L72 1700" stroke="#262159" stroke-width="7"/><path d="M76 -700 L156 1700" stroke="#262159" stroke-width="7"/><path d="M160 -700 L240 1700" stroke="#262159" stroke-width="7"/><path d="M244 -700 L324 1700" stroke="#262159" stroke-width="7"/><path d="M328 -700 L408 1700" stroke="#262159" stroke-width="7"/><path d="M412 -700 L492 1700" stroke="#262159" stroke-width="7"/><path d="M496 -700 L576 1700" stroke="#262159" stroke-width="7"/><path d="M580 -700 L660 1700" stroke="#262159" stroke-width="7"/><path d="M664 -700 L744 1700" stroke="#262159" stroke-width="7"/><path d="M748 -700 L828 1700" stroke="#262159" stroke-width="7"/><path d="M832 -700 L912 1700" stroke="#262159" stroke-width="7"/><path d="M916 -700 L996 1700" stroke="#262159" stroke-width="7"/><path d="M1000 -700 L1080 1700" stroke="#262159" stroke-width="7"/><path d="M1084 -700 L1164 1700" stroke="#262159" stroke-width="7"/><path d="M-700 -654 L1100 -740" stroke="#262159" stroke-width="7"/><path d="M-700 -576 L1100 -662" stroke="#262159" stroke-width="7"/><path d="M-700 -498 L1100 -584" stroke="#262159" stroke-width="7"/><path d="M-700 -420 L1100 -506" stroke="#262159" stroke-width="7"/><path d="M-700 -342 L1100 -428" stroke="#262159" stroke-width="7"/><path d="M-700 -264 L1100 -350" stroke="#262159" stroke-width="7"/><path d="M-700 -186 L1100 -272" stroke="#262159" stroke-width="7"/><path d="M-700 -108 L1100 -194" stroke="#262159" stroke-width="7"/><path d="M-700 -30 L1100 -116" stroke="#262159" stroke-width="7"/><path d="M-700 48 L1100 -38" stroke="#262159" stroke-width="7"/><path d="M-700 126 L1100 40" stroke="#262159" stroke-width="7"/><path d="M-700 204 L1100 118" stroke="#262159" stroke-width="7"/><path d="M-700 282 L1100 196" stroke="#262159" stroke-width="7"/><path d="M-700 360 L1100 274" stroke="#262159" stroke-width="7"/><path d="M-700 438 L1100 352" stroke="#262159" stroke-width="7"/><path d="M-700 516 L1100 430" stroke="#262159" stroke-width="7"/><path d="M-700 594 L1100 508" stroke="#262159" stroke-width="7"/><path d="M-700 672 L1100 586" stroke="#262159" stroke-width="7"/><path d="M-700 750 L1100 664" stroke="#262159" stroke-width="7"/><path d="M-700 828 L1100 742" stroke="#262159" stroke-width="7"/><path d="M-700 906 L1100 820" stroke="#262159" stroke-width="7"/><path d="M-700 984 L1100 898" stroke="#262159" stroke-width="7"/><path d="M-700 1062 L1100 976" stroke="#262159" stroke-width="7"/><path d="M-700 1140 L1100 1054" stroke="#262159" stroke-width="7"/><path d="M-700 1218 L1100 1132" stroke="#262159" stroke-width="7"/><path d="M-700 1296 L1100 1210" stroke="#262159" stroke-width="7"/><path d="M-700 1374 L1100 1288" stroke="#262159" stroke-width="7"/><path d="M-700 1452 L1100 1366" stroke="#262159" stroke-width="7"/><path d="M-700 1530 L1100 1444" stroke="#262159" stroke-width="7"/><path d="M118 -700 L118 1700" stroke="#302A69" stroke-width="13"/><path d="M-700 446 L-60 448 C120 440 260 470 480 452 L1100 450" stroke="#302A69" stroke-width="14" fill="none"/><text x="150" y="438" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">W Broad St</text><text x="182" y="204" font-size="11" fill="#7E78B3" font-family="Quicksand, sans-serif">Battery Park</text><g opacity="1"><polyline points="70,168 70,252 118,252" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#1E1A48" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="70,168 70,252 118,252" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><polyline points="118,252 118,410 210,448 296,470 296,560" fill="none" stroke="#F1EEFF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><polyline points="296,560 338,560 338,626" fill="none" stroke="#B3A6FF" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="0 6"/><circle cx="70" cy="168" r="9" fill="#1E1A48" stroke="#B3A6FF" stroke-width="4"/><circle cx="118" cy="252" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="296" cy="560" r="7" fill="#1E1A48" stroke="#F1EEFF" stroke-width="4"/><circle cx="338" cy="626" r="10" fill="#F1EEFF"/><circle cx="338" cy="626" r="4" fill="#1E1A48"/></g><circle cx="296" cy="560" r="20" fill="#B3A6FF" opacity="0.22"/><circle cx="296" cy="560" r="8" fill="#B3A6FF" stroke="#1E1A48" stroke-width="3"/></svg></div></div>
+<div id="map" aria-label="Map of Richmond, VA"></div>
+<div class="sb"><span id="clock">8:00</span><span class="ic"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i><span class="bat"></span></span></div>
+<button id="restart" class="gone" aria-label="Restart the prototype"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Restart</button>
+
+<button id="whereField" aria-label="Where to? Plan a trip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Where to?</button>
+<div class="sheet" id="homeSheet" style="top:642px">
+  <span class="grab"></span>
+  <div class="sheetTitle">Nearest GRTC bus stops</div>
+  <div class="near"><span class="rb">1</span><div style="flex:1;min-width:0"><div class="nt"><span>toward Downtown</span><small>0.3 mi</small></div><div class="ns">Brook + Brookland Park</div><div class="nx">8:18 · 8:48 · 9:18</div></div></div><div class="near"><span class="rb">14</span><div style="flex:1;min-width:0"><div class="nt"><span>toward Downtown</span><small>0.5 mi</small></div><div class="ns">Hermitage + Laburnum</div><div class="nx">8:12 · 8:42 · 9:12</div></div></div><div class="near"><span class="rb">20</span><div style="flex:1;min-width:0"><div class="nt"><span>toward Downtown</span><small>0.7 mi</small></div><div class="ns">Brookland Park + North Ave</div><div class="nx">8:40 · 9:10 · 9:40</div></div></div>
+</div>
+
+<div class="sheet away" id="sheet" style="top:110px">
+  <span class="grab"></span>
+  <div class="planHead" id="planHead"><span>Plan a trip</span><button class="x" id="close" aria-label="Close trip planning">✕</button></div>
+  <div class="where" id="whereBox">
+    <span class="lbls"><span>Leave</span><span>Arrive</span></span>
+    <span class="places">
+      <span class="f first">Current location</span>
+      <button class="f ph" id="to" aria-label="Destination">Where to?</button>
+    </span></div>
+  <div id="sugg"></div>
+  <div class="chips gone" id="chips"><button class="chip" id="timeChip">Now, 8:00 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><button class="chip" id="bufChip"><span id="bufLabel">5 min buffer</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
+  <div id="tripBody" class="gone">
+    <div style="margin-top:28px"><div class="eyebrow">Your easiest way there</div></div>
+    <div class="trip" style="margin-top:12px;padding-bottom:16px"><span class="ic" style="grid-column:1/-1;gap:8px"><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>5<em style="font-style:normal;color:#A39CCF;font-size:16px;padding:0 2px">›</em><span class="c bus"><svg fill="currentColor" role="img" aria-label="Bus"><use href="#w-bus"></use></svg>1</span>14<em style="font-style:normal;color:#A39CCF;font-size:16px;padding:0 2px">›</em><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>4</span><span class="ts l" id="leave">8:08</span><span></span><span class="ts">8:18</span><span></span><span class="ts r">8:36</span><span class="cap l">leave</span><span></span><span class="cap">departs</span><span></span><span class="cap r">arrive</span><button class="cta" id="go" style="grid-column:1/-1;margin-top:14px;font-size:15px">Start this trip</button></div>
+    <div style="display:flex;justify-content:center;margin-top:24px"><button class="linkbtn more u" id="others" style="margin-top:0;height:auto;font-size:15px">See 3 other ways to go</button></div>
+  </div>
+</div>
+
+<div class="sheet away" id="otherSheet" style="top:250px">
+  <span class="grab"></span>
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:24px;font-weight:600;letter-spacing:-0.01em">Other ways to go</span>
+  <button class="linkbtn" id="back" style="font-size:14px;font-weight:600;color:#B3A6FF;border-radius:10px;padding:2px 4px">Back</button></div>
+  <div class="subl" style="margin-top:2px">Your recommended trip stays on the map.</div>
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:24px"><div class="row"><div class="tm"><b>Now</b><small>leave</small></div><div class="mini"><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>29 min, bike only</div><div class="tm r"><b>8:29</b><small>arrive</small></div></div><div class="row"><div class="tm"><b class="amber">Now</b><small>leave</small></div><div style="display:flex;flex-direction:column;align-items:center"><div class="mini"><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>9<em>›</em><span class="c bus"><svg fill="currentColor" role="img" aria-label="Bus"><use href="#w-bus"></use></svg>14</span>20<em>›</em><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>5</div><span class="pillnote">Bus is 3 min early</span></div><div class="tm r"><b>8:38</b><small>arrive</small></div></div><div class="row"><div class="tm"><b>8:24</b><small>leave</small></div><div class="mini"><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>11<em>›</em><span class="c bus"><svg fill="currentColor" role="img" aria-label="Bus"><use href="#w-bus"></use></svg>20</span>15<em>›</em><span class="c bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span>3</div><div class="tm r"><b>8:58</b><small>arrive</small></div></div></div>
+</div>
+
+<div id="scrim" class="scrim"></div>
+<div class="ios away" id="timeSheet" role="dialog" aria-label="Choose when to leave">
+  <div class="iosHead"><button class="iosBtn" data-close>Cancel</button><b>When</b><button class="iosBtn strong" data-close>Done</button></div>
+  <div class="seg"><span class="on">Leave at</span><span>Arrive by</span></div>
+  <div class="wheel" data-close>
+    <div class="band"></div>
+    <div class="col w2"><i>Tue Oct 27</i><i>Wed Oct 28</i><i class="sel">Today</i><i>Fri Oct 30</i><i>Sat Oct 31</i></div>
+    <div class="col"><i>6</i><i>7</i><i class="sel">8</i><i>9</i><i>10</i></div>
+    <div class="col"><i>50</i><i>55</i><i class="sel">00</i><i>05</i><i>10</i></div>
+    <div class="col"><i></i><i></i><i class="sel">AM</i><i>PM</i><i></i></div>
+  </div>
+  <button class="iosRow" data-close>Leave now</button>
+</div>
+<div class="ios away" id="bufSheet" role="dialog" aria-label="Bus stop buffer">
+  <div class="iosHead"><span></span><b>Bus stop buffer</b><button class="iosBtn strong" data-close>Done</button></div>
+  <p class="iosNote">Extra time at the stop in case the ride takes longer or the bus comes early.</p>
+  <div class="opts">
+    <button class="opt" data-b="0"><span>No buffer</span><i></i></button>
+    <button class="opt" data-b="3"><span>3 min</span><i></i></button>
+    <button class="opt on" data-b="5"><span>5 min</span><i></i></button>
+  </div>
+</div>
+<div id="sunrise" aria-hidden="true"></div>
+<button id="sunToast" class="away" aria-live="polite"><span class="sun"></span><span><b>Sunrise is in 2 minutes</b><small>Look east and check it out.</small></span></button>
+<div id="alert" class="gone" role="alertdialog" aria-labelledby="alertT">
+  <div class="alertCard"><b id="alertT">Did Route 1 arrive?</b><p>Let us know so we can keep your trip on track.</p>
+  <div class="alertBtns"><button id="notYet">Not yet</button><button id="yesOn" class="strong">Yes, I'm on</button></div></div>
+</div>
+<div id="ride" class="away" aria-roledescription="carousel" aria-label="Trip steps"><div id="track"><div class="step float"><div style="display:flex;justify-content:space-between;align-items:center"><span class="eyebrow">Step 1 of 4</span><span style="display:flex;gap:6px;align-items:center;font-size:12px;color:#C3BDE6"><i style="display:block;width:8px;height:8px;border-radius:4px;background:#5BD69A"></i>Live</span></div><div style="display:flex;gap:14px;align-items:center;margin-top:14px"><span class="circ bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span><div><div class="stt"><span id="mins">4 min</span> to your stop</div><div class="subl" style="margin-top:2px">Brook / Brookland Park</div></div></div><div class="note" style="margin-top:16px"><i></i><span id="spare">Then Route 1 at 8:18. You'll have 5 min to spare.</span></div></div><div class="step float"><div style="display:flex;justify-content:space-between;align-items:center"><span class="eyebrow">Step 2 of 4</span><span style="display:flex;gap:6px;align-items:center;font-size:12px;color:#C3BDE6"><i style="display:block;width:8px;height:8px;border-radius:4px;background:#5BD69A"></i>Live</span></div><div style="display:flex;gap:14px;align-items:center;margin-top:14px"><span class="circ bk"><svg fill="currentColor" role="img" aria-label="Wait"><use href="#w-clock"></use></svg></span><div><div class="stt">Wait at Brook / Brookland Park</div><div class="subl" style="margin-top:2px">Route 1 toward Downtown at 8:18</div></div></div><div class="note" style="margin-top:16px"><i></i><span id="busNote">Bus is arriving in 5 min</span></div></div><div class="step float"><div style="display:flex;justify-content:space-between;align-items:center"><span class="eyebrow">Step 3 of 4</span><span style="display:flex;gap:6px;align-items:center;font-size:12px;color:#C3BDE6"><i style="display:block;width:8px;height:8px;border-radius:4px;background:#5BD69A"></i>Live</span></div><div style="display:flex;gap:14px;align-items:center;margin-top:14px"><span class="circ bus"><svg fill="currentColor" role="img" aria-label="Bus"><use href="#w-bus"></use></svg><b>1</b></span><div><div class="stt">Ride 14 min</div><div class="subl" style="margin-top:2px">9 stops, get off at Broad / 12th</div></div></div><div class="note" style="margin-top:16px"><i></i>Arrive at your stop around 8:32.</div></div><div class="step float"><div style="display:flex;justify-content:space-between;align-items:center"><span class="eyebrow">Step 4 of 4</span><span style="display:flex;gap:6px;align-items:center;font-size:12px;color:#C3BDE6"><i style="display:block;width:8px;height:8px;border-radius:4px;background:#5BD69A"></i>Live</span></div><div style="display:flex;gap:14px;align-items:center;margin-top:14px"><span class="circ bk"><svg fill="currentColor" role="img" aria-label="Bike"><use href="#w-bike"></use></svg></span><div><div class="stt">Bike 4 min</div><div class="subl" style="margin-top:2px">to VCU Medical Center</div></div></div><div class="note" style="margin-top:16px"><i></i>Arrive at 8:36.</div></div></div></div>
+<div id="dots" class="away" aria-label="Choose step"><button aria-label="Step 1" data-i="0"></button><button aria-label="Step 2" data-i="1"></button><button aria-label="Step 3" data-i="2"></button><button aria-label="Step 4" data-i="3"></button></div>
+<button id="endBtn" class="away">End trip</button>
+</div></div>
+
+<script>
+// ── Setup ────────────────────────────────────────────────────────────────
+// Paste a PUBLIC Mapbox token (starts with pk.) restricted to the URL that
+// hosts this file. Leave empty to use the built-in illustrated map.
+const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2FyYWhrZWFuZSIsImEiOiJjbXZ0eDByaXYwMXhwMnlwejc2aXY4bHBjIn0.jX6OMMq_s5BBygyMd4UyZw';
+
+const C = {page:'#1A1640', bike:'#B3A6FF', bus:'#F1EEFF', halo:'#1A1640', grtc:'#8C7FE0',
+           water:'#1F2C5C', land:'#1E1A48', park:'#233552', road:'#2A2560', major:'#3A3380', bldg:'#231E55', label:'#9A93CF'};
+// Approximate stops for the case-study trip (lng, lat). Geometry is road-snapped
+// with the Mapbox Directions API when a token is set.
+const P = { home:[-77.4520,37.5790], stopA:[-77.4436,37.5737], brookBroad:[-77.4410,37.5463],
+            stopB:[-77.4318,37.5413], dest:[-77.4290,37.5395] };
+const FALLBACK = { bike1:[P.home,[-77.4520,37.5737],P.stopA], bus:[P.stopA,[-77.4428,37.5650],[-77.4420,37.5580],P.brookBroad,P.stopB],
+                   bike2:[P.stopB,[-77.4300,37.5404],P.dest] };
+const GRTC = [ // a few real bus corridors near the rider
+  [[-77.4985,37.5820],[-77.4318,37.5413],[-77.4160,37.5290]],          // Broad St
+  [[-77.4390,37.5500],[-77.4430,37.6000]],                              // Chamberlayne
+  [[-77.4410,37.5463],[-77.4460,37.6050]],                              // Brook Rd
+  [[-77.4700,37.5737],[-77.4250,37.5737]],                              // Brookland Park Blvd
+  [[-77.4610,37.5560],[-77.4560,37.6000]],                              // Hermitage Rd
+  [[-77.4700,37.5600],[-77.4250,37.5450]] ];                            // Leigh St
+const PINS = [['1',P.stopA],['14',[-77.4585,37.5770]],['20',[-77.4480,37.5737]]];
+
+const $ = id => document.getElementById(id);
+let screen = 'home', step = 0, map = null, live = false, geo = {...FALLBACK}, meMarker = null, pinEls = [], raf = null, typing = 0;
+
+// Scale the 402×874 phone to whatever frame Squarespace gives it.
+function fit(){ const s = Math.min(innerWidth/402, innerHeight/874, 1.25); $('fit').style.transform = `scale(${s})`; }
+addEventListener('resize', fit); fit();
+// Keep the phone from scrolling when a focused button sits off-screen mid-transition.
+const phone = document.querySelector('.phone'); phone.addEventListener('scroll', () => { phone.scrollTop = 0; phone.scrollLeft = 0; });
+function fb(v){ document.querySelectorAll('.fbv').forEach(e=>e.classList.toggle('on', e.dataset.v===v)); }
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+
+// ── Screens ──────────────────────────────────────────────────────────────
+function go(s){
+  screen = s; cancelAnimationFrame(raf); typing++; closeSheets();
+  const sheet=$('sheet');
+  $('whereField').classList.toggle('away', s!=='home');
+  $('homeSheet').classList.toggle('away', s!=='home');
+  sheet.classList.toggle('away', !(s==='plan'||s==='trip'));
+  $('otherSheet').classList.toggle('away', s!=='other');
+  for(const id of ['ride','dots','endBtn']) $(id).classList.toggle('away', s!=='ride');
+  $('restart').classList.toggle('gone', s==='home');
+  $('clock').textContent = s==='ride' ? '8:09' : '8:00';
+  if(s==='home' && typeof setBuf==='function') setBuf(5);
+  if(s!=='ride'){ busLeft = 5; late = false; sunSeen = false; if(typeof busCountdown==='function'){ busCountdown(false); hideToast(); $('sunrise').classList.remove('on'); } }
+  if(s==='home'||s==='plan'){ const to=$('to'); to.className='f ph'; to.textContent='Where to?'; $('sugg').innerHTML=''; $('sugg').classList.remove('show'); }
+  if(s==='plan'){ sheet.style.top='110px'; $('planHead').classList.remove('gone'); $('chips').classList.add('gone'); $('tripBody').classList.add('gone');
+    $('whereBox').classList.add('focus'); $('to').innerHTML='<span class="caret"></span>Where to?'; }
+  if(s==='trip'){ sheet.style.top='300px'; $('planHead').classList.add('gone'); $('whereBox').classList.remove('focus');
+    $('chips').classList.remove('gone'); $('tripBody').classList.remove('gone'); }
+  if(s==='ride') setStep(0);
+  else { fb(s); if(live) camera(s); }
+}
+
+$('whereField').onclick = () => go('plan');
+$('close').onclick = () => go('home');
+$('restart').onclick = () => go('home');
+$('go').onclick = () => go('ride');
+$('others').onclick = () => go('other');
+$('back').onclick = () => go('trip');
+
+// Step 2: the bus countdown (1 min every 2.5 s), then ask whether the bus came.
+let busT = null, busLeft = 5, late = false, sunSeen = false, toastT = null;
+function hideToast(){ $('sunToast').classList.add('away'); }
+$('sunToast').onclick = hideToast;
+function busCountdown(on){
+  clearInterval(busT); $('alert').classList.add('gone');
+  if(!on) return;
+  const show = () => { $('busNote').textContent = (late ? 'Running 2 min late. ' : '') + (busLeft>0 ? `Bus is arriving in ${busLeft} min` : 'Bus is arriving now');
+    const [h,m] = [8, 18 - busLeft + (late?2:0)]; $('clock').textContent = `${h}:${String(m).padStart(2,'0')}`; };
+  show();
+  busT = setInterval(() => { if(busLeft>0){ busLeft--; show(); } if(busLeft===0){ clearInterval(busT); setTimeout(()=>{ if(screen==='ride'&&step===1) $('alert').classList.remove('gone'); }, 1200); } }, 2500);
+}
+$('yesOn').onclick = () => { $('alert').classList.add('gone'); setStep(2); };
+$('notYet').onclick = () => { $('alert').classList.add('gone'); late = true; busLeft = 2; busCountdown(true); };
+
+// Time chip and buffer chip open iOS-style bottom sheets.
+function openSheet(id){ $('scrim').classList.add('on'); $(id).classList.remove('away'); }
+function closeSheets(){ $('scrim').classList.remove('on'); document.querySelectorAll('.ios').forEach(e=>e.classList.add('away')); }
+$('timeChip').onclick = () => openSheet('timeSheet');
+$('bufChip').onclick = () => openSheet('bufSheet');
+$('scrim').onclick = closeSheets;
+document.querySelectorAll('[data-close]').forEach(e => e.addEventListener('click', closeSheets));
+// The bus leaves 8:18 and the bike is 5 min, so the leave time is 8:13 minus the buffer.
+function setBuf(b){
+  document.querySelectorAll('.opt').forEach(x=>x.classList.toggle('on', +x.dataset.b===b));
+  $('bufLabel').textContent = b ? `${b} min buffer` : 'No buffer';
+  $('leave').textContent = `8:${String(13-b).padStart(2,'0')}`;
+  $('spare').textContent = b ? `Then Route 1 at 8:18. You'll have ${b} min to spare.` : 'Then Route 1 at 8:18. You\'ll get there as it arrives.';
+}
+document.querySelectorAll('.opt').forEach(o => o.onclick = () => { setBuf(+o.dataset.b); setTimeout(closeSheets, 180); });
+$('endBtn').onclick = () => go('home');
+
+// Destination field: tap to type a search, then pick a result.
+$('to').onclick = async () => {
+  if(screen!=='plan') return;
+  const run = ++typing, b = $('to'), q = 'VCU Med';
+  b.className = 'f'; $('sugg').classList.remove('show'); $('sugg').innerHTML='';
+  for(let i=1;i<=q.length;i++){ if(run!==typing) return; b.innerHTML = q.slice(0,i)+'<span class="caret"></span>'; await wait(110); }
+  await wait(220); if(run!==typing) return;
+  $('sugg').innerHTML = `<button class="sg" data-name="VCU Medical Center"><span class="sgi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><span class="sgt"><b>VCU Medical Center</b><small>1250 E Marshall St, Richmond, VA 23298</small></span></button><button class="sg" data-name="VCU Massey Comprehensive Cancer Center"><span class="sgi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><span class="sgt"><b>VCU Massey Comprehensive Cancer Center</b><small>401 College St, Richmond, VA 23298</small></span></button><button class="sg" data-name="VCU Medical Center Parking Deck"><span class="sgi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><span class="sgt"><b>VCU Medical Center Parking Deck</b><small>E Clay St, Richmond, VA 23219</small></span></button>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$('sugg').classList.add('show')));
+  $('sugg').querySelectorAll('.sg').forEach(el => el.onclick = () => {
+    typing++; b.className='f'; b.textContent = el.dataset.name; $('sugg').innerHTML=''; go('trip'); });
+};
+
+// ── On your way: swipeable steps ─────────────────────────────────────────
+const CARD = 340 + 12;
+function setStep(i){
+  step = Math.max(0, Math.min(3, i));
+  $('track').style.transform = `translateX(${-step*CARD}px)`;
+  document.querySelectorAll('.step').forEach((e,k)=>{ e.classList.toggle('cur', k===step); e.setAttribute('aria-hidden', k!==step); });
+  document.querySelectorAll('#dots button').forEach((e,k)=>{ e.classList.toggle('on', k===step); e.setAttribute('aria-current', k===step ? 'step' : 'false'); });
+  cancelAnimationFrame(raf); fb('ride'+step); if(live) camera('ride'); rideAnim();
+  $('clock').textContent = ['8:09','8:13','8:18','8:32'][step];
+  busCountdown(step===1);
+  const sunny = step>=2; $('sunrise').classList.toggle('on', sunny);
+  clearTimeout(toastT);
+  if(step===2 && !sunSeen){ sunSeen = true; toastT = setTimeout(()=>{ $('sunToast').classList.remove('away'); toastT = setTimeout(hideToast, 15000); }, 900); }
+  else hideToast();
+}
+document.querySelectorAll('#dots button').forEach(b => b.onclick = () => setStep(+b.dataset.i));
+addEventListener('keydown', e => { if(screen!=='ride') return; if(e.key==='ArrowRight') setStep(step+1); if(e.key==='ArrowLeft') setStep(step-1); });
+let sx=null, dx=0;
+$('ride').addEventListener('pointerdown', e => { sx=e.clientX; dx=0; $('track').classList.add('drag'); $('ride').setPointerCapture(e.pointerId); });
+$('ride').addEventListener('pointermove', e => { if(sx===null) return; const sc = $('fit').getBoundingClientRect().width/402;
+  dx = (e.clientX-sx)/sc; $('track').style.transform = `translateX(${-step*CARD+dx}px)`; });
+const up = () => { if(sx===null) return; sx=null; $('track').classList.remove('drag');
+  if(dx<-50) setStep(step+1); else if(dx>50) setStep(step-1);
+  else if(Math.abs(dx)<6 && lastX > 24+340) setStep(step+1);   // a tap on the peeking next card
+  else $('track').style.transform = `translateX(${-step*CARD}px)`; };
+let lastX = 0; $('ride').addEventListener('pointerdown', e => { const r=$('fit').getBoundingClientRect(); lastX=(e.clientX-r.left)/(r.width/402); });
+$('ride').addEventListener('pointerup', up); $('ride').addEventListener('pointercancel', up);
+
+// The rider dot creeps along the current leg; step 1 also counts down.
+function along(line, f){
+  const seg=[]; let tot=0;
+  for(let i=1;i<line.length;i++){ const d=Math.hypot(line[i][0]-line[i-1][0], line[i][1]-line[i-1][1]); seg.push(d); tot+=d; }
+  let d=f*tot; for(let i=0;i<seg.length;i++){ if(d<=seg[i]){ const k=seg[i]?d/seg[i]:0; return [line[i][0]+(line[i+1][0]-line[i][0])*k, line[i][1]+(line[i+1][1]-line[i][1])*k]; } d-=seg[i]; }
+  return line[line.length-1];
+}
+function rideAnim(){
+  const leg = [geo.bike1, null, geo.bus, geo.bike2][step], t0 = performance.now(), dur = 24000;
+  if(!leg){ if(live && meMarker) meMarker.setLngLat(geo.bus[0]); return; }
+  const tick = now => { const f = Math.min(1, .2 + (now-t0)/dur*.8);
+    if(step===0) $('mins').textContent = Math.max(1, Math.ceil(5*(1-f)))+' min';
+    if(live && meMarker) meMarker.setLngLat(along(leg, f));
+    if(f<1 && screen==='ride') raf = requestAnimationFrame(tick); };
+  raf = requestAnimationFrame(tick);
+}
+
+// ── Live Mapbox map ──────────────────────────────────────────────────────
+function bounds(lines){ const b = new mapboxgl.LngLatBounds(); lines.flat().forEach(p=>b.extend(p)); return b; }
+function camera(s){
+  const all=[geo.bike1,geo.bus,geo.bike2];
+  const op = {home:0, plan:0, trip:1, ride:1, other:.45}[s];
+  for(const id of ['r-halo-b1','r-halo-bus','r-halo-b2','r-bike1','r-bus','r-bike2','r-stops','r-dest']){
+    const type = map.getLayer(id).type; map.setPaintProperty(id, type==='circle'?'circle-opacity':'line-opacity', op);
+    if(type==='circle') map.setPaintProperty(id,'circle-stroke-opacity',op); }
+  map.setPaintProperty('grtc','line-opacity', s==='home' ? .6 : 0);
+  pinEls.forEach(p => p.style.opacity = s==='home' ? 1 : 0);
+  const w = s==='ride' ? .5 : 1;
+  for(const id of ['r-bike1','r-bus','r-bike2']) map.setPaintProperty(id,'line-width', 5*w);
+  for(const id of ['r-halo-b1','r-halo-bus','r-halo-b2']) map.setPaintProperty(id,'line-width', 9*w);
+  if(s!=='ride' && meMarker) meMarker.setLngLat(geo.bike1[0]);
+  const fitTo = (b, pad, pitch) => { const c = map.cameraForBounds(b, {padding:pad, maxZoom:16.5}); map.easeTo({...c, pitch, bearing:0, duration:1300}); };
+  if(s==='home') map.flyTo({center:P.home, zoom:14.6, pitch:0, bearing:0, padding:{top:0,bottom:300,left:0,right:0}, duration:1200});
+  if(s==='plan') map.easeTo({center:P.home, zoom:15, pitch:0, padding:{top:0,bottom:700,left:0,right:0}, duration:900});
+  if(s==='trip') fitTo(bounds(all), {top:64,bottom:874-300+28,left:40,right:40}, 0);
+  if(s==='other') fitTo(bounds(all), {top:56,bottom:874-250+24,left:48,right:48}, 0);
+  if(s==='ride'){ const stop = geo.bus[0];
+    const leg = [geo.bike1, [[stop[0]-.002,stop[1]-.0015],[stop[0]+.002,stop[1]+.0015]], geo.bus, geo.bike2][step];
+    fitTo(bounds([leg]), {top:90,bottom:380,left:50,right:50}, 45); }
+}
+function tint(){
+  for(const l of map.getStyle().layers){ const id=l.id, set=(k,v)=>{ try{ map.setPaintProperty(id,k,v); }catch(e){} };
+    if(l.type==='background') set('background-color', C.page);
+    else if(l.type==='fill'){ set('fill-color', /water/.test(id)?C.water : /park|pitch|grass|wood|green/.test(id)?C.park : /building/.test(id)?C.bldg : C.land); }
+    else if(l.type==='fill-extrusion') set('fill-extrusion-color', C.bldg);
+    else if(l.type==='line'){ set('line-color', /water/.test(id)?C.water : /motorway|trunk|primary/.test(id)?C.major : C.road); }
+    else if(l.type==='symbol'){ if(/poi|transit|airport/.test(id)) map.setLayoutProperty(id,'visibility','none'); else { set('text-color', C.label); set('text-halo-color', C.page); } }
+  }
+}
+async function snap(profile, pts){
+  const u = `https://api.mapbox.com/directions/v5/mapbox/${profile}/${pts.map(p=>p.join(',')).join(';')}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+  try{ const r = await fetch(u); const j = await r.json(); return j.routes[0].geometry.coordinates; }catch(e){ return null; }
+}
+const ls = c => ({type:'Feature', geometry:{type:'LineString', coordinates:c}});
+async function startMap(){
+  if(!MAPBOX_TOKEN || !window.mapboxgl) return;
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  map = new mapboxgl.Map({container:'map', style:'mapbox://styles/mapbox/dark-v11', center:P.home, zoom:14.6,
+                          attributionControl:false, logoPosition:'top-left', pitchWithRotate:false});
+  map.addControl(new mapboxgl.AttributionControl({compact:true}), 'top-left');
+  map.on('error', e => { if(!live){ console.warn('Mapbox failed, using illustrated map', e.error); $('map').style.display='none'; } });
+  map.on('load', async () => {
+    tint();
+    const [b1, bus, b2, ...lines] = await Promise.all([ snap('cycling',[P.home,P.stopA]), snap('driving',[P.stopA,P.brookBroad,P.stopB]),
+      snap('cycling',[P.stopB,P.dest]), ...GRTC.map(c=>snap('driving',c)) ]);
+    geo = {bike1:b1||FALLBACK.bike1, bus:bus||FALLBACK.bus, bike2:b2||FALLBACK.bike2};
+    map.addSource('grtc', {type:'geojson', data:{type:'FeatureCollection', features:lines.map((l,i)=>ls(l||GRTC[i]))}});
+    map.addLayer({id:'grtc', type:'line', source:'grtc', layout:{'line-cap':'round','line-join':'round'}, paint:{'line-color':C.grtc,'line-width':3.5,'line-opacity':.6,'line-opacity-transition':{duration:500}}});
+    const add=(id,src,c,w,dots)=>{ map.addSource(id+'-s',{type:'geojson',data:ls(src)});
+      map.addLayer({id, type:'line', source:id+'-s', layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':c,'line-width':w,'line-opacity':0,'line-opacity-transition':{duration:500}, ...(dots?{'line-dasharray':[0,2]}:{})}}); };
+    add('r-halo-b1',geo.bike1,C.halo,9); add('r-halo-bus',geo.bus,C.halo,9); add('r-halo-b2',geo.bike2,C.halo,9);
+    add('r-bike1',geo.bike1,C.bike,5,true); add('r-bus',geo.bus,C.bus,5); add('r-bike2',geo.bike2,C.bike,5,true);
+    const pt = c => ({type:'Feature', geometry:{type:'Point', coordinates:c}});
+    map.addSource('stops',{type:'geojson',data:{type:'FeatureCollection',features:[pt(geo.bus[0]),pt(geo.bus[geo.bus.length-1])]}});
+    map.addLayer({id:'r-stops',type:'circle',source:'stops',paint:{'circle-radius':6,'circle-color':C.halo,'circle-stroke-color':C.bus,'circle-stroke-width':3,'circle-opacity':0,'circle-stroke-opacity':0}});
+    map.addSource('dest',{type:'geojson',data:pt(P.dest)});
+    map.addLayer({id:'r-dest',type:'circle',source:'dest',paint:{'circle-radius':8,'circle-color':C.bus,'circle-stroke-color':C.halo,'circle-stroke-width':4,'circle-opacity':0,'circle-stroke-opacity':0}});
+    pinEls = PINS.map(([n,c]) => { const el=document.createElement('div'); el.className='pin'; el.textContent=n; new mapboxgl.Marker({element:el}).setLngLat(c).addTo(map); return el; });
+    const el = document.createElement('div'); el.className='me';
+    meMarker = new mapboxgl.Marker({element:el}).setLngLat(geo.bike1[0]).addTo(map);
+    live = true; $('fb').style.display='none'; if(screen==='ride') setStep(step); else go(screen);
+  });
+}
+go('home'); startMap();
+</script>
+</body>
+</html>
